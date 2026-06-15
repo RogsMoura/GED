@@ -78,6 +78,10 @@ class GedController extends Controller
 
         $titulo = $labels[$tipo] ?? strtoupper($tipo);
 
+        if (empty($path)) {
+            $arquivos = collect();
+        }
+
         return view('ged.explorador', [
             'titulo' => $titulo,
             'tipo' => $tipo,
@@ -91,82 +95,170 @@ class GedController extends Controller
     // ARQUIVO
     public function arquivo(GedService $ged, $tipo, $path)
     {
-        $arquivo = $ged->fullPath($tipo, $path);
+        $arquivo = $ged->fullPath($tipo, urldecode($path));
 
-        if (!$arquivo) {
+        if (!$arquivo || !file_exists($arquivo)) {
             abort(404);
         }
 
-        return response()->file($arquivo);
+        return response()->file(
+            $arquivo,
+            [
+                'Content-Disposition' => 'inline; filename="' . basename($arquivo) . '"',
+            ]
+        );
     }
 
     //UPLOAD
     public function upload(Request $request, GedService $ged, $tipo)
     {
-        $path = $request->input('path', '');
-
         $base = $ged->root($tipo);
 
         if (!$base) {
             abort(404);
         }
 
-        $destino = $base . '\\' . str_replace('/', '\\', $path);
+        $path = $request->input('path', '');
 
-        if ($request->hasFile('arquivo')) {
+        $destino = $base;
 
-            $file = $request->file('arquivo');
-
-            $file->move(
-                $destino,
-                $file->getClientOriginalName()
-            );
-
-            $cacheKey = "ged_{$tipo}_" . md5($destino);
-
-            cache()->forget($cacheKey);
+        if ($path) {
+            $destino .= '\\' . str_replace('/', '\\', $path);
         }
 
-        return back();
+        try {
+
+            if (!$request->hasFile('arquivos')) {
+                return back()->with('error', 'Nenhum arquivo selecionado.');
+            }
+
+            foreach ($request->file('arquivos') as $arquivo) {
+
+                $arquivo->move(
+                    $destino,
+                    $arquivo->getClientOriginalName()
+                );
+            }
+
+            $this->limparCachePasta($tipo, $path, $ged);
+
+            return back()->with('success', 'Arquivo(s) enviado(s) com sucesso.');
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with('error', 'Erro ao enviar arquivo(s).');
+
+        }
     }
 
     //DOWNLOAD
     public function download(GedService $ged, $tipo, $path)
     {
-        $arquivo = $ged->fullPath($tipo, $path);
+        $arquivo = $ged->fullPath($tipo, urldecode($path));
 
-        if (!$arquivo) {
+        if (!$arquivo || !file_exists($arquivo)) {
             abort(404);
         }
 
         return response()->download($arquivo);
     }
 
+    //DELETE
     public function delete(Request $request, GedService $ged, $tipo)
     {
         $path = $request->input('path');
 
         $full = $ged->fullPath($tipo, $path);
 
-        if (!$full) {
+        if (!$full || !file_exists($full)) {
             abort(404);
         }
 
-        $pastaPai = dirname($full);
+        try {
 
-        if (is_dir($full)) {
-            rmdir($full);
+            if (is_dir($full)) {
+                $this->deleteRecursively($full);
+            } elseif (is_file($full)) {
+                unlink($full);
+            }
+
+            $pasta = dirname($path);
+
+            if ($pasta === '.') {
+                $pasta = '';
+            }
+
+            $this->limparCachePasta($tipo, $pasta, $ged);
+
+            return back()->with('success', 'Item excluído com sucesso.');
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with('error', 'Erro ao excluir o item.');
+
+        }
+    }
+    
+    //DELETE RECURSIVE
+    private function deleteRecursively(string $caminho): void
+    {
+        if (is_file($caminho) || is_link($caminho)) {
+            unlink($caminho);
+            return;
         }
 
-        if (is_file($full)) {
-            unlink($full);
+        $itens = array_diff(scandir($caminho), ['.', '..']);
+
+        foreach ($itens as $item) {
+            $this->deleteRecursively($caminho . DIRECTORY_SEPARATOR . $item);
         }
 
-        $cacheKey = "ged_{$tipo}_" . md5($pastaPai);
+        rmdir($caminho);
+    }
 
-        cache()->forget($cacheKey);
+    //DELETE MULTIPLE
+    public function deleteMultiple(Request $request, GedService $ged, $tipo)
+    {
+        $paths = $request->input('paths', []);
 
-        return back();
+        try {
+
+            foreach ($paths as $path) {
+
+                $full = $ged->fullPath($tipo, $path);
+
+                if (!$full || !file_exists($full)) {
+                    continue;
+                }
+
+                if (is_dir($full)) {
+                    $this->deleteRecursively($full);
+                } else {
+                    unlink($full);
+                }
+
+                $pasta = dirname($path);
+
+                if ($pasta === '.') {
+                    $pasta = '';
+                }
+
+                $this->limparCachePasta($tipo, $pasta, $ged);
+            }
+
+            return back()->with('success', 'Itens excluídos com sucesso.');
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with('error', 'Erro ao excluir os itens.');
+
+        }
     }
 
     //CRIAR PASTA
@@ -187,38 +279,91 @@ class GedController extends Controller
             . '\\'
             . $nome;
 
-        if (!file_exists($full)) {
-            mkdir($full, 0777, true);
+        try {
+
+            if (!file_exists($full)) {
+                mkdir($full, 0777, true);
+            }
+
+            $cacheKey = "ged_{$tipo}_" . md5(dirname($full));
+
+            cache()->forget($cacheKey);
+
+            $this->limparCachePasta($tipo, $path, $ged);
+
+            return back()->with('success', 'Pasta criada com sucesso.');
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with('error', 'Erro ao criar a pasta.');
+
         }
-
-        $cacheKey = "ged_{$tipo}_" . md5(dirname($full));
-
-        cache()->forget($cacheKey);
-
-        return back();
     }
 
     //EDITAR
     public function rename(Request $request, GedService $ged, $tipo)
     {
-        $base = $ged->root($tipo);
+        $old = $request->input('old');
+        $new = trim($request->input('new'));
 
-        if (!$base) {
+        $oldPath = $ged->fullPath($tipo, $old);
+
+        if (!$oldPath || !file_exists($oldPath)) {
             abort(404);
         }
 
-        $old = $request->input('old');
-        $new = $request->input('new');
+        $extensao = pathinfo($oldPath, PATHINFO_EXTENSION);
 
-        $oldPath = $base . '\\' . str_replace('/', '\\', $old);
-        $newPath = $base . '\\' . str_replace('/', '\\', $new);
+        $novoNome = $new;
 
-        rename($oldPath, $newPath);
+        if ($extensao) {
+            $novoNome .= '.' . $extensao;
+        }
 
-        $cacheKey = "ged_{$tipo}_" . md5(dirname($oldPath));
+        $novoPath = dirname($oldPath) . DIRECTORY_SEPARATOR . $novoNome;
+
+        try {
+
+            rename($oldPath, $novoPath);
+
+            $pasta = dirname($old);
+
+            if ($pasta === '.') {
+                $pasta = '';
+            }
+
+            $this->limparCachePasta($tipo, $pasta, $ged);
+
+            return back()->with('success', 'Item renomeado com sucesso.');
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with('error', 'Erro ao renomear o item.');
+
+        }
+    }
+
+    //LIMPAR CACHE
+    private function limparCachePasta(string $tipo, string $path, GedService $ged): void
+    {
+        $base = $ged->root($tipo);
+
+        if (!$base) {
+            return;
+        }
+
+        $caminho = $base;
+
+        if ($path) {
+            $caminho .= '\\' . str_replace('/', '\\', $path);
+        }
+
+        $cacheKey = "ged_{$tipo}_" . md5($caminho);
 
         cache()->forget($cacheKey);
-
-        return back();
     }
 }
