@@ -34,6 +34,7 @@
 
             </main>
         </div>
+        <?php echo $__env->yieldPushContent('scripts'); ?>
     </body>
 </html>
 <?php /**PATH C:\laragon\www\ged-crfpb\resources\views/layouts/app.blade.php ENDPATH**/ ?>

@@ -317,150 +317,156 @@
 
     </form>
 
-    <script>
-    //RENAME
-    function renomearItem(botao)
-    {
-        const caminho = botao.dataset.path;
-        const nomeAtual = botao.dataset.name;
+    @push('scripts')
 
-        Swal.fire({
-            title: 'Renomear item',
-            input: 'text',
-            inputValue: nomeAtual,
-            inputPlaceholder: 'Digite o novo nome',
-            showCancelButton: true,
-            confirmButtonText: '✏️ Renomear',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#eab308',
-            inputValidator: (value) => {
+        <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-                if (!value) {
-                    return 'Informe um nome.';
-                }
+        <script>
+            // RENAME
+            function renomearItem(botao)
+            {
+                const caminho = botao.dataset.path;
+                const nomeAtual = botao.dataset.name;
 
-                if (value === nomeAtual) {
-                    return 'Informe um nome diferente.';
-                }
+                Swal.fire({
+                    title: 'Renomear item',
+                    input: 'text',
+                    inputValue: nomeAtual,
+                    inputPlaceholder: 'Digite o novo nome',
+                    showCancelButton: true,
+                    confirmButtonText: '✏️ Renomear',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#eab308',
+                    inputValidator: (value) => {
 
+                        if (!value) {
+                            return 'Informe um nome.';
+                        }
+
+                        if (value === nomeAtual) {
+                            return 'Informe um nome diferente.';
+                        }
+
+                    }
+
+                }).then((result) => {
+
+                    if (result.isConfirmed) {
+
+                        document.getElementById('renameOld').value = caminho;
+                        document.getElementById('renameNew').value = result.value;
+
+                        document.getElementById('renameForm').submit();
+
+                    }
+
+                });
             }
 
-        }).then((result) => {
+            // SELECT ALL
+            document.getElementById('selectAll')?.addEventListener('change', function () {
 
-            if (result.isConfirmed) {
+                document.querySelectorAll('input[name="paths[]"]')
+                    .forEach(item => item.checked = this.checked);
 
-                document.getElementById('renameOld').value = caminho;
-                document.getElementById('renameNew').value = result.value;
-
-                document.getElementById('renameForm').submit();
-
-            }
-
-        });
-    }
-
-    //SELECT ALL
-    document.getElementById('selectAll')?.addEventListener('change', function () {
-
-        document.querySelectorAll('input[name="paths[]"]')
-            .forEach(item => item.checked = this.checked);
-
-    });
-
-    //DELETE
-    function excluirItem(caminho)
-    {
-        Swal.fire({
-            title: 'Excluir item?',
-            text: 'Esta ação não poderá ser desfeita.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: '🗑️ Excluir',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-
-            if (result.isConfirmed) {
-
-                document.getElementById('deletePath').value = caminho;
-                document.getElementById('deleteForm').submit();
-
-            }
-
-        });
-    }
-
-    //DELETE SELECTED
-    document.getElementById('deleteSelectedBtn')
-    ?.addEventListener('click', function (e) {
-
-        e.preventDefault();
-
-        const selecionados = document.querySelectorAll(
-            'input[name="paths[]"]:checked'
-        );
-
-        if (selecionados.length === 0) {
-
-            Swal.fire({
-                icon: 'info',
-                title: 'Nenhum item selecionado',
-                text: 'Selecione pelo menos um item.'
             });
 
-            return;
-        }
+            // DELETE
+            function excluirItem(caminho)
+            {
+                Swal.fire({
+                    title: 'Excluir item?',
+                    text: 'Esta ação não poderá ser desfeita.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '🗑️ Excluir',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
 
-        Swal.fire({
-            title: 'Excluir itens selecionados?',
-            text: `Você selecionou ${selecionados.length} item(ns).`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonText: 'Cancelar',
-            confirmButtonText: '🗑️ Excluir'
-        }).then((result) => {
+                    if (result.isConfirmed) {
 
-            if (result.isConfirmed) {
+                        document.getElementById('deletePath').value = caminho;
+                        document.getElementById('deleteForm').submit();
 
-                e.target.closest('form').submit();
+                    }
 
+                });
             }
 
-        });
+            // DELETE SELECTED
+            document.getElementById('deleteSelectedBtn')
+            ?.addEventListener('click', function (e) {
 
-    });
-    </script>
+                e.preventDefault();
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                const selecionados = document.querySelectorAll(
+                    'input[name="paths[]"]:checked'
+                );
 
-    @if(session('success'))
+                if (selecionados.length === 0) {
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Nenhum item selecionado',
+                        text: 'Selecione pelo menos um item.'
+                    });
+
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Excluir itens selecionados?',
+                    text: `Você selecionou ${selecionados.length} item(ns).`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonText: '🗑️ Excluir'
+                }).then((result) => {
+
+                    if (result.isConfirmed) {
+
+                        e.target.closest('form').submit();
+
+                    }
+
+                });
+
+            });
+        </script>
+
+        @if(session('success'))
         <script>
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: {!! json_encode(session('success')) !!},
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: @json(session('success')),
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
         </script>
         @endif
 
         @if(session('error'))
         <script>
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'error',
-            title: {!! json_encode(session('error')) !!},
-            showConfirmButton: false,
-            timer: 4000,
-            timerProgressBar: true
-        });
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: @json(session('error')),
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true
+            });
         </script>
         @endif
+
+    @endpush
+
+    @stack('scripts')
 
 </x-app-layout>
