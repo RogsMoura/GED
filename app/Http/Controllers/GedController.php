@@ -354,6 +354,10 @@ class GedController extends Controller
         $path = $request->input('path', '');
         $nome = trim($request->input('nome'));
 
+        if (preg_match('/[\\\\\/:*?"<>|]/', $nome)) {
+            return back()->with('error', 'O nome da pasta contém caracteres inválidos.');
+        }
+
         $full = $base
             . '\\'
             . str_replace('/', '\\', $path)
@@ -388,6 +392,10 @@ class GedController extends Controller
     {
         $old = $request->input('old');
         $new = trim($request->input('new'));
+
+        if (preg_match('/[\\\\\/:*?"<>|]/', $new)) {
+            return back()->with('error', 'O nome contém caracteres inválidos.');
+        }
 
         $oldPath = $ged->fullPath($tipo, $old);
 
