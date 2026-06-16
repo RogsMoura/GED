@@ -184,6 +184,11 @@ class GedController extends Controller
             abort(404);
         }
 
+        $request->validate([
+            'arquivos' => ['required', 'array'],
+            'arquivos.*' => ['required', 'file', 'max:51200'],
+        ]);
+
         $path = $request->input('path', '');
 
         $destino = $base;
