@@ -19,7 +19,12 @@ class GedController extends Controller
 
         $search = request('search');
         $sort = request('sort', 'name_asc');
-        $perPage = request('per_page', 50);
+        $perPage = (int) request('per_page', 50);
+
+        if (!in_array($perPage, [25, 50, 100])) {
+            $perPage = 50;
+        }
+        
         $page = (int) request('page', 1);
 
         $caminho = $ged->fullPath($tipo, $path);
