@@ -366,9 +366,11 @@ class GedController extends Controller
 
         try {
 
-            if (!file_exists($full)) {
-                mkdir($full, 0777, true);
+            if (file_exists($full)) {
+                return back()->with('error', 'Já existe uma pasta com este nome.');
             }
+
+            mkdir($full, 0777, true);
 
             $cacheKey = "ged_{$tipo}_" . md5(dirname($full));
 
@@ -412,6 +414,10 @@ class GedController extends Controller
         }
 
         $novoPath = dirname($oldPath) . DIRECTORY_SEPARATOR . $novoNome;
+
+        if (file_exists($novoPath)) {
+            return back()->with('error', 'Já existe um item com este nome.');
+        }
 
         try {
 
