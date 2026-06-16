@@ -13,6 +13,10 @@ class GedController extends Controller
     {
         $path = urldecode($path);
 
+        if (str_contains($path, '..')) {
+            abort(404);
+        }
+
         $search = request('search');
         $sort = request('sort', 'name_asc');
         $perPage = request('per_page', 50);
