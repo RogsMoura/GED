@@ -193,12 +193,12 @@ class GedController extends Controller
             'arquivos.*' => ['required', 'file', 'max:51200'],
         ]);
 
-        $path = $request->input('path', '');
+        $path = $request->input('path') ?? '';
 
-        $destino = $base;
+        $destino = $ged->fullPath($tipo, $path);
 
-        if ($path) {
-            $destino .= '\\' . str_replace('/', '\\', $path);
+        if (!$destino || !is_dir($destino)) {
+            abort(404);
         }
 
         try {
@@ -345,6 +345,15 @@ class GedController extends Controller
 
         }
     }
+    
+    //AUXILIAR (CRIAR PASTA)
+    private function nomeReservadoWindows(string $nome): bool
+    {
+        return preg_match(
+            '/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i',
+            trim($nome)
+        );
+    }
 
     //CRIAR PASTA
     public function createFolder(Request $request, GedService $ged, $tipo)
@@ -355,18 +364,24 @@ class GedController extends Controller
             abort(404);
         }
 
-        $path = $request->input('path', '');
+        $path = $request->input('path') ?? '';
         $nome = trim($request->input('nome'));
 
         if (preg_match('/[\\\\\/:*?"<>|]/', $nome)) {
             return back()->with('error', 'O nome da pasta contém caracteres inválidos.');
         }
 
-        $full = $base
-            . '\\'
-            . str_replace('/', '\\', $path)
-            . '\\'
-            . $nome;
+        if ($this->nomeReservadoWindows($nome)) {
+            return back()->with('error', 'Este nome não pode ser utilizado.');
+        }
+
+        $novoPath = $path ? $path . '/' . $nome : $nome;
+
+        $full = $ged->fullPath($tipo, $novoPath);
+
+        if (!$full) {
+            abort(404);
+        }
 
         try {
 
@@ -393,7 +408,7 @@ class GedController extends Controller
         }
     }
 
-    //EDITAR
+    //RENOMEAR
     public function rename(Request $request, GedService $ged, $tipo)
     {
         $old = $request->input('old');
@@ -401,6 +416,10 @@ class GedController extends Controller
 
         if (preg_match('/[\\\\\/:*?"<>|]/', $new)) {
             return back()->with('error', 'O nome contém caracteres inválidos.');
+        }
+
+        if ($this->nomeReservadoWindows($new)) {
+            return back()->with('error', 'Este nome não pode ser utilizado.');
         }
 
         $oldPath = $ged->fullPath($tipo, $old);
@@ -451,8 +470,10 @@ class GedController extends Controller
     }
 
     //LIMPAR CACHE
-    private function limparCachePasta(string $tipo, string $path, GedService $ged): void
+    private function limparCachePasta(string $tipo, ?string $path, GedService $ged): void
     {
+        $path = $path ?? '';
+
         $base = $ged->root($tipo);
 
         if (!$base) {
