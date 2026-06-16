@@ -19,17 +19,28 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     //ROTAS CRIADAS
-    Route::get('/ged/{tipo}/{path?}', [GedController::class, 'explorar'])->where('path', '.*');
-    Route::get('/ged-arquivo/{tipo}/{path}', [GedController::class, 'arquivo'])->where('path', '.*');
-    Route::get('/ged-download/{tipo}/{path}', [GedController::class, 'download'])->where('path', '.*');
-    Route::post('/ged/{tipo}/upload', [GedController::class, 'upload']);
-    Route::delete('/ged/{tipo}/delete', [GedController::class, 'delete']);
-    Route::post('/ged/{tipo}/rename', [GedController::class, 'rename']);
-    Route::post('/ged/{tipo}/folder', [GedController::class, 'createFolder']);
-    Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple']);
+    Route::get('/ged/{tipo}/{path?}', [GedController::class, 'explorar'])
+        ->where('path', '.*')
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::get('/ged-arquivo/{tipo}/{path}', [GedController::class, 'arquivo'])
+        ->where('path', '.*')
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::get('/ged-download/{tipo}/{path}', [GedController::class, 'download'])
+        ->where('path', '.*')
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::post('/ged/{tipo}/upload', [GedController::class, 'upload'])
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::delete('/ged/{tipo}/delete', [GedController::class, 'delete'])
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::post('/ged/{tipo}/rename', [GedController::class, 'rename'])
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::post('/ged/{tipo}/folder', [GedController::class, 'createFolder'])
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple'])
+        ->whereIn('tipo', ['pf', 'pj', 'setores']);
     Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/ged/admin', [GedController::class, 'index']);
     });
-    });
+});
 
 require __DIR__.'/auth.php';
