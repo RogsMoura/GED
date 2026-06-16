@@ -14,6 +14,9 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    const ROLE_ADMIN = 'admin';
+    const ROLE_GESTOR = 'gestor';
+    const ROLE_COLABORADOR = 'colaborador';
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -28,5 +31,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    //SETOR
+    public function setor()
+    {
+        return $this->belongsTo(Setor::class);
+    }
+
+    //ADM
+    public function isAdmin()
+    {
+        return $this->role === 'administrador';
+    }
+
+    //GESTOR
+    public function isGestor()
+    {
+        return $this->role === 'gestor';
+    }
+
+    //FUNCIONARIO
+    public function isColaborador()
+    {
+        return $this->role === 'colaborador';
     }
 }

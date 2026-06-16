@@ -26,8 +26,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/ged/{tipo}/delete', [GedController::class, 'delete']);
     Route::post('/ged/{tipo}/rename', [GedController::class, 'rename']);
     Route::post('/ged/{tipo}/folder', [GedController::class, 'createFolder']);
-    Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple']
-);
+    Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple']);
+    Route::middleware(['auth', 'role:admin'])->group(function () {
+        Route::get('/ged/admin', [GedController::class, 'index']);
+    });
     });
 
 require __DIR__.'/auth.php';

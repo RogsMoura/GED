@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Services\GedService;
 
 class GedController extends Controller
@@ -11,6 +12,11 @@ class GedController extends Controller
     public function explorar(GedService $ged, $tipo, $path = '')
     {
         $path = urldecode($path);
+
+        $search = request('search');
+        $sort = request('sort', 'name_asc');
+        $perPage = request('per_page', 100);
+        $page = (int) request('page', 1);
 
         $base = $ged->root($tipo);
 
@@ -41,23 +47,42 @@ class GedController extends Controller
 
         $cacheKey = "ged_{$tipo}_" . md5($caminho);
 
-        $dados = cache()->remember($cacheKey, 120, function () use ($caminho) {
+        $dados = cache()->remember($cacheKey, now()->addHours(12), function () use ($caminho, $path) {
 
-            $itens = scandir($caminho);
+            $pastas = [];
+            $arquivos = [];
+            $carregarArquivos = !empty($path);
 
-            $pastas = collect($itens)
-                ->reject(fn ($i) => in_array($i, ['.', '..', '$RECYCLE.BIN', 'System Volume Information']))
-                ->filter(fn ($i) => is_dir($caminho . '\\' . $i))
-                ->values()
-                ->map(fn ($i) => (string) $i);
+            foreach (new \FilesystemIterator($caminho, \FilesystemIterator::SKIP_DOTS) as $item) {
 
-            $arquivos = collect($itens)
-                ->reject(fn ($i) => in_array($i, ['.', '..']))
-                ->reject(fn ($i) => str_starts_with($i, '~$'))
-                ->reject(fn ($i) => in_array($i, ['Thumbs.db', '.ppinfocache']))
-                ->filter(fn ($i) => is_file($caminho . '\\' . $i))
-                ->values()
-                ->map(fn ($i) => (string) $i);
+                $nome = $item->getFilename();
+
+                if (in_array($nome, ['$RECYCLE.BIN', 'System Volume Information'])) {
+                    continue;
+                }
+
+                if ($item->isDir()) {
+                    $pastas[] = $nome;
+                    continue;
+                }
+
+                if (!$carregarArquivos) {
+                    continue;
+                }
+
+                if (
+                    str_starts_with($nome, '~$') ||
+                    in_array($nome, ['Thumbs.db', '.ppinfocache'])
+                ) {
+                    continue;
+                }
+
+                $arquivos[] = $nome;
+            }
+
+            $pastas = collect($pastas);
+
+            $arquivos = collect($arquivos);
 
             return [
                 'pastas' => $pastas->toArray(),
@@ -79,7 +104,48 @@ class GedController extends Controller
         $titulo = $labels[$tipo] ?? strtoupper($tipo);
 
         if (empty($path)) {
+
             $arquivos = collect();
+
+            // Pesquisa
+            if ($search) {
+
+                $pastas = $pastas->filter(function ($item) use ($search) {
+
+                    return str_contains(
+                        mb_strtolower($item),
+                        mb_strtolower($search)
+                    );
+
+                });
+
+            }
+
+            // Ordenação
+            switch ($sort) {
+
+                case 'name_desc':
+                    $pastas = $pastas->sortDesc();
+                    break;
+
+                default:
+                    $pastas = $pastas->sort();
+            }
+
+            $pastas = $pastas->values();
+
+            $total = $pastas->count();
+
+            $pastas = new LengthAwarePaginator(
+                $pastas->slice(($page - 1) * $perPage, $perPage)->values(),
+                $total,
+                $perPage,
+                $page,
+                [
+                    'path' => request()->url(),
+                    'query' => request()->query(),
+                ]
+            );
         }
 
         return view('ged.explorador', [
@@ -225,7 +291,13 @@ class GedController extends Controller
     {
         $paths = $request->input('paths', []);
 
+        if (empty($paths)) {
+            return back()->with('error', 'Nenhum item selecionado.');
+        }
+
         try {
+
+            $pastasParaLimpar = [];
 
             foreach ($paths as $path) {
 
@@ -247,6 +319,10 @@ class GedController extends Controller
                     $pasta = '';
                 }
 
+                $pastasParaLimpar[$pasta] = true;
+            }
+
+            foreach (array_keys($pastasParaLimpar) as $pasta) {
                 $this->limparCachePasta($tipo, $pasta, $ged);
             }
 

@@ -37,6 +37,12 @@ class GedService
             return null;
         }
 
-        return $base . '\\' . str_replace('/', '\\', urldecode($path));
+        $path = trim(urldecode($path));
+
+        if ($path === '') {
+            return $base;
+        }
+
+        return $base . '\\' . str_replace('/', '\\', $path);
     }
 }

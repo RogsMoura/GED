@@ -8,6 +8,19 @@
                 {{ $titulo }}
             </h1>
 
+            <div class="flex items-center gap-3 mb-4">
+
+                <a href="{{ url('/ged/' . $tipo) }}"
+                onclick="event.preventDefault(); history.length > 1 ? history.back() : window.location = this.href;"
+                class="px-4 py-2 bg-gray-100 border border-gray-300
+                        text-gray-700 rounded-lg hover:bg-gray-200 rounded-lg">
+
+                    ← Voltar
+
+                </a>
+
+            </div>
+
             {{-- Breadcrumb --}}
             <div class="mb-6 text-sm text-gray-600">
 
@@ -30,101 +43,140 @@
             </div>
 
             {{-- Ações --}}
-            <div class="grid md:grid-cols-2 gap-4 mb-6">
+            <div class="flex items-center gap-2 mb-6">
 
+                {{-- NOVA PASTA --}}
+                <button
+                    type="button"
+                    title="Nova pasta"
+                    onclick="criarPasta()"
+                    class="w-10 h-10 flex items-center justify-center
+                        bg-gray-100 text-gray-700 rounded-lg
+                        hover:bg-gray-200 transition whitespace-nowrap">
+
+                    📁
+
+                </button>
+                
+                {{-- UPLOAD --}}
                 @if(!empty($path))
-                    {{-- Upload --}}
-                    <div class="border rounded-lg p-4">
 
-                        <h3 class="font-semibold mb-3">
-                            Upload de Arquivo
-                        </h3>
+                    <button
+                        type="button"
+                        title="Upload de arquivos"
+                        onclick="document.getElementById('uploadInput').click()"
+                        class="w-10 h-10 flex items-center justify-center
+                        bg-gray-100 text-gray-700 rounded-lg
+                        hover:bg-gray-200 transition whitespace-nowrap">
 
-                        <form method="POST"
-                            enctype="multipart/form-data"
-                            action="/ged/{{ $tipo }}/upload">
+                        ⬆️
 
-                            @csrf
+                    </button>
 
-                            <input type="hidden"
-                                name="path"
-                                value="{{ $path }}">
-
-                            <input
-                                type="file"
-                                name="arquivos[]"
-                                multiple
-                                class="mb-2 w-full border rounded p-2">
-
-                            <button type="submit"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-
-                                ⬆️ Upload
-
-                            </button>
-
-                        </form>
-
-                    </div>
                 @endif
 
-                {{-- Criar Pasta --}}
-                <div class="border rounded-lg p-4">
+            </div>
 
-                    <h3 class="font-semibold mb-3">
-                        📁 Nova Pasta
-                    </h3>
+            {{-- Filtros --}}
+            @if(empty($path))
 
-                    <form method="POST"
-                          action="/ged/{{ $tipo }}/folder">
+                <div class="bg-gray-50 border rounded-lg p-4 mb-6">
 
-                        @csrf
+                    <form id="filterForm" method="GET">
 
-                        <input type="hidden"
-                               name="path"
-                               value="{{ $path }}">
+                        <div class="grid lg:grid-cols-2 gap-4">
 
-                        <input type="text"
-                               name="nome"
-                               placeholder="Nome da pasta"
-                               class="mb-2 w-full border rounded p-2">
+                            <div class="flex flex-wrap gap-3 items-center">
 
-                        <button type="submit"
-                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                            Criar Pasta
-                        </button>
+                                <input
+                                    id="searchInput"
+                                    type="text"
+                                    name="search"
+                                    value="{{ request('search') }}"
+                                    placeholder="🔍 Buscar pasta"
+                                    class="border rounded p-2 flex-1 min-w-[250px]">
+
+                            </div>
+
+                            <div class="flex gap-2 justify-end">
+
+                                <select
+                                    id="sortSelect"
+                                    name="sort"
+                                    class="border rounded p-2">
+
+                                    <option value="name_asc" {{ request('sort', 'name_asc') == 'name_asc' ? 'selected' : '' }}>
+                                        A → Z
+                                    </option>
+
+                                    <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>
+                                        Z → A
+                                    </option>
+
+                                </select>
+
+                                <select
+                                    id="perPageSelect"
+                                    name="per_page"
+                                    class="border rounded p-2">
+
+                                    @foreach([25, 50, 100, 200] as $size)
+
+                                        <option
+                                            value="{{ $size }}"
+                                            {{ request('per_page', 100) == $size ? 'selected' : '' }}>
+
+                                            {{ $size }} por página
+
+                                        </option>
+
+                                    @endforeach
+
+                                </select>
+
+                            </div>
+
+                        </div>
 
                     </form>
 
                 </div>
 
-            </div>
+            @endif
 
+            {{-- Exclusão múltipla --}}
             <form method="POST" action="/ged/{{ $tipo }}/delete-multiple">
 
                 @csrf
                 @method('DELETE')
 
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 bg-gray-50 border rounded-lg">
 
-                    <label class="flex items-center gap-2">
+                    <div class="flex items-center gap-4">
 
-                        <input type="checkbox" id="selectAll">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="selectAll">
+                            <span>Selecionar todos</span>
+                        </label>
 
-                        <span>Selecionar todos</span>
+                        <span id="selectedCount" class="text-sm text-gray-500">
+                            0 itens selecionados
+                        </span>
 
-                    </label>
+                    </div>
 
                     <button
                         id="deleteSelectedBtn"
                         type="submit"
-                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
 
                         🗑️ Excluir selecionados
 
                     </button>
 
                 </div>
+
+                
 
                 {{-- Pastas --}}
                 <div class="mb-8">
@@ -194,10 +246,19 @@
 
                     </div>
 
+                    @if(empty($path) && $pastas instanceof \Illuminate\Pagination\LengthAwarePaginator)
+
+                        <div class="mt-6">
+                            {{ $pastas->appends(request()->query())->links() }}
+                        </div>
+
+                    @endif
+
                 </div>
 
+                {{-- Arquivos --}}
                 @if(!empty($path))
-                    {{-- Arquivos --}}
+                    
                     <div>
 
                         <h2 class="font-bold text-lg mb-3">
@@ -302,6 +363,25 @@
 
     </form>
 
+    <form id="folderForm"
+        method="POST"
+        action="/ged/{{ $tipo }}/folder"
+        class="hidden">
+
+        @csrf
+
+        <input
+            type="hidden"
+            name="path"
+            value="{{ $path }}">
+
+        <input
+            type="hidden"
+            id="folderName"
+            name="nome">
+
+    </form>
+
     <form id="deleteForm"
         method="POST"
         action="/ged/{{ $tipo }}/delete"
@@ -317,9 +397,31 @@
 
     </form>
 
+    <form id="uploadForm"
+        method="POST"
+        enctype="multipart/form-data"
+        action="/ged/{{ $tipo }}/upload"
+        class="hidden">
+
+        @csrf
+
+        <input
+            type="hidden"
+            name="path"
+            value="{{ $path }}">
+
+        <input
+            id="uploadInput"
+            type="file"
+            name="arquivos[]"
+            multiple
+            class="hidden">
+
+    </form>
+
     @push('scripts')
 
-        <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <script>
             // RENAME
@@ -370,6 +472,8 @@
                     .forEach(item => item.checked = this.checked);
 
             });
+
+            atualizarContador();
 
             // DELETE
             function excluirItem(caminho)
@@ -435,6 +539,107 @@
                 });
 
             });
+
+            //UPLOAD
+            document.getElementById('uploadInput')?.addEventListener('change', function () {
+
+                if (this.files.length > 0) {
+                    document.getElementById('uploadForm').submit();
+                }
+
+            });
+
+            //CRIAR PASTA
+            function criarPasta()
+            {
+                Swal.fire({
+                    title: 'Nova pasta',
+                    input: 'text',
+                    inputPlaceholder: 'Digite o nome da pasta',
+                    showCancelButton: true,
+                    confirmButtonText: 'Criar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#16a34a',
+
+                    inputValidator: (value) => {
+
+                        if (!value) {
+                            return 'Informe um nome.';
+                        }
+
+                    }
+
+                }).then((result) => {
+
+                    if (result.isConfirmed) {
+
+                        document.getElementById('folderName').value = result.value;
+                        document.getElementById('folderForm').submit();
+
+                    }
+
+                });
+            }
+
+            //ATUALIZAR CONTADOR SELECT
+            function atualizarContador() {
+
+                const total = document.querySelectorAll(
+                    'input[name="paths[]"]:checked'
+                ).length;
+
+                const contador = document.getElementById('selectedCount');
+
+                contador.textContent =
+                    `${total} item(ns) selecionado(s)`;
+            }
+            document.querySelectorAll('input[name="paths[]"]')
+                .forEach(item => {
+
+                    item.addEventListener('change', atualizarContador);
+
+                });
+                
+            document.getElementById('selectAll')
+                ?.addEventListener('change', function () {
+
+                    document.querySelectorAll('input[name="paths[]"]')
+                        .forEach(item => item.checked = this.checked);
+
+                    atualizarContador();
+            });
+
+            // Busca instantânea
+            let debounce;
+            document.getElementById('searchInput')
+                ?.addEventListener('input', function () {
+
+                    clearTimeout(debounce);
+
+                    debounce = setTimeout(() => {
+
+                        document.getElementById('filterForm').submit();
+
+                    }, 500);
+
+                });
+
+            // Ordenação automática
+            document.getElementById('sortSelect')
+                ?.addEventListener('change', function () {
+
+                    document.getElementById('filterForm').submit();
+
+                });
+
+            // Quantidade por página automática
+            document.getElementById('perPageSelect')
+                ?.addEventListener('change', function () {
+
+                    document.getElementById('filterForm').submit();
+
+                });
+        
         </script>
 
         @if(session('success'))
@@ -466,7 +671,5 @@
         @endif
 
     @endpush
-
-    @stack('scripts')
 
 </x-app-layout>
