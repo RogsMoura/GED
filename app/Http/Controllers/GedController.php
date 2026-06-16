@@ -182,11 +182,6 @@ class GedController extends Controller
     //UPLOAD
     public function upload(Request $request, GedService $ged, $tipo)
     {
-        $base = $ged->root($tipo);
-
-        if (!$base) {
-            abort(404);
-        }
 
         $request->validate([
             'arquivos' => ['required', 'array'],
@@ -197,8 +192,15 @@ class GedController extends Controller
 
         $destino = $ged->fullPath($tipo, $path);
 
-        if (!$destino || !is_dir($destino)) {
+        if (!$destino) {
             abort(404);
+        }
+
+        if (!is_dir($destino)) {
+            return back()->with(
+                'error',
+                'A pasta de destino não está disponível no momento.'
+            );
         }
 
         try {
@@ -209,10 +211,23 @@ class GedController extends Controller
 
             foreach ($request->file('arquivos') as $arquivo) {
 
-                $arquivo->move(
-                    $destino,
-                    $arquivo->getClientOriginalName()
-                );
+                $nome = $arquivo->getClientOriginalName();
+
+                if (preg_match('/[\\\\\/:*?"<>|]/', $nome)) {
+                    return back()->with(
+                        'error',
+                        "O arquivo '{$nome}' possui caracteres inválidos."
+                    );
+                }
+
+                if (file_exists($destino . DIRECTORY_SEPARATOR . $nome)) {
+                    return back()->with(
+                        'error',
+                        "O arquivo '{$nome}' já existe."
+                    );
+                }
+
+                $arquivo->move($destino, $nome);
             }
 
             $this->limparCachePasta($tipo, $path, $ged);
@@ -266,6 +281,8 @@ class GedController extends Controller
             }
 
             $this->limparCachePasta($tipo, $pasta, $ged);
+
+            cache()->forget("ged_{$tipo}_" . md5($full));
 
             return back()->with('success', 'Item excluído com sucesso.');
 
@@ -322,6 +339,8 @@ class GedController extends Controller
                     unlink($full);
                 }
 
+                cache()->forget("ged_{$tipo}_" . md5($full));
+
                 $pasta = dirname($path);
 
                 if ($pasta === '.') {
@@ -358,14 +377,14 @@ class GedController extends Controller
     //CRIAR PASTA
     public function createFolder(Request $request, GedService $ged, $tipo)
     {
-        $base = $ged->root($tipo);
-
-        if (!$base) {
-            abort(404);
-        }
 
         $path = $request->input('path') ?? '';
+
         $nome = trim($request->input('nome'));
+
+        if ($nome === '') {
+            return back()->with('error', 'Informe um nome para a pasta.');
+        }
 
         if (preg_match('/[\\\\\/:*?"<>|]/', $nome)) {
             return back()->with('error', 'O nome da pasta contém caracteres inválidos.');
@@ -412,7 +431,12 @@ class GedController extends Controller
     public function rename(Request $request, GedService $ged, $tipo)
     {
         $old = $request->input('old');
+
         $new = trim($request->input('new'));
+
+        if ($new === '') {
+            return back()->with('error', 'Informe um novo nome.');
+        }
 
         if (preg_match('/[\\\\\/:*?"<>|]/', $new)) {
             return back()->with('error', 'O nome contém caracteres inválidos.');
@@ -474,16 +498,10 @@ class GedController extends Controller
     {
         $path = $path ?? '';
 
-        $base = $ged->root($tipo);
+        $caminho = $ged->fullPath($tipo, $path);
 
-        if (!$base) {
+        if (!$caminho) {
             return;
-        }
-
-        $caminho = $base;
-
-        if ($path) {
-            $caminho .= '\\' . str_replace('/', '\\', $path);
         }
 
         $cacheKey = "ged_{$tipo}_" . md5($caminho);

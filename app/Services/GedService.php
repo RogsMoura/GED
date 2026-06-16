@@ -4,7 +4,7 @@ namespace App\Services;
 
 class GedService
 {
-    public function root($tipo)
+    public function root(string $tipo): ?string
     {
         return config("ged.roots.{$tipo}");
     }
@@ -17,18 +17,13 @@ class GedService
             return null;
         }
 
-        $path = trim(urldecode($path));
-
-        if ($path === '') {
-            return $base;
-        }
-
-        $path = str_replace('/', '\\', $path);
+        $path = urldecode($path);
 
         if (str_contains($path, '..')) {
             return null;
         }
 
-        return $base . '\\' . ltrim($path, '\\');
+        return rtrim($base, '\\')
+            . ($path ? '\\' . str_replace('/', '\\', $path) : '');
     }
 }
