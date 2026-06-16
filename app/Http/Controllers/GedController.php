@@ -22,16 +22,10 @@ class GedController extends Controller
         $perPage = request('per_page', 50);
         $page = (int) request('page', 1);
 
-        $base = $ged->root($tipo);
+        $caminho = $ged->fullPath($tipo, $path);
 
-        if (!$base) {
+        if (!$caminho) {
             abort(404);
-        }
-
-        $caminho = $base;
-
-        if ($path) {
-            $caminho .= '\\' . str_replace('/', '\\', $path);
         }
 
         if (!is_dir($caminho)) {
