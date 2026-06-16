@@ -132,11 +132,11 @@
                                     name="per_page"
                                     class="border rounded p-2">
 
-                                    <?php $__currentLoopData = [25, 50, 100, 200]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $size): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <?php $__currentLoopData = [25, 50, 100]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $size): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
                                         <option
                                             value="<?php echo e($size); ?>"
-                                            <?php echo e(request('per_page', 100) == $size ? 'selected' : ''); ?>>
+                                            <?php echo e(request('per_page', 50) == $size ? 'selected' : ''); ?>>
 
                                             <?php echo e($size); ?> por página
 

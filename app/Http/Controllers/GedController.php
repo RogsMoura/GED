@@ -15,7 +15,7 @@ class GedController extends Controller
 
         $search = request('search');
         $sort = request('sort', 'name_asc');
-        $perPage = request('per_page', 100);
+        $perPage = request('per_page', 50);
         $page = (int) request('page', 1);
 
         $base = $ged->root($tipo);

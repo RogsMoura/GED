@@ -120,11 +120,11 @@
                                     name="per_page"
                                     class="border rounded p-2">
 
-                                    @foreach([25, 50, 100, 200] as $size)
+                                    @foreach([25, 50, 100] as $size)
 
                                         <option
                                             value="{{ $size }}"
-                                            {{ request('per_page', 100) == $size ? 'selected' : '' }}>
+                                            {{ request('per_page', 50) == $size ? 'selected' : '' }}>
 
                                             {{ $size }} por página
 
