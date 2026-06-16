@@ -431,6 +431,10 @@ class GedController extends Controller
 
             $this->limparCachePasta($tipo, $pasta, $ged);
 
+            // Remove também o cache do item renomeado
+            cache()->forget("ged_{$tipo}_" . md5($oldPath));
+            cache()->forget("ged_{$tipo}_" . md5($novoPath));
+
             return back()->with('success', 'Item renomeado com sucesso.');
 
         } catch (\Throwable $e) {
