@@ -38,9 +38,6 @@ Route::middleware('auth')->group(function () {
         ->whereIn('tipo', ['pf', 'pj', 'setores']);
     Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple'])
         ->whereIn('tipo', ['pf', 'pj', 'setores']);
-    Route::middleware(['auth', 'role:admin'])->group(function () {
-        Route::get('/ged/admin', [GedController::class, 'index']);
-    });
 });
 
 require __DIR__.'/auth.php';

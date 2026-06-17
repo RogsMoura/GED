@@ -9,6 +9,14 @@ class GedService
         return config("ged.roots.{$tipo}");
     }
 
+    public function assertInsideRoot(string $tipo, string $path): bool
+    {
+        $base = $this->root($tipo);
+        $full = $this->fullPath($tipo, $path);
+
+        return $base && $full && str_starts_with($full, $base);
+    }
+
     public function fullPath($tipo, $path = '')
     {
         $base = $this->root($tipo);
@@ -25,5 +33,26 @@ class GedService
 
         return rtrim($base, '\\')
             . ($path ? '\\' . str_replace('/', '\\', $path) : '');
+    }
+
+    public function assertSafePath(string $tipo, string $path = ''): string
+    {
+        if (str_contains($path, '..')) {
+            abort(404);
+        }
+
+        $base = $this->root($tipo);
+
+        if (!$base) {
+            abort(404);
+        }
+
+        $full = $this->fullPath($tipo, $path);
+
+        if (!$full || !str_starts_with($full, $base)) {
+            abort(404);
+        }
+
+        return $full;
     }
 }

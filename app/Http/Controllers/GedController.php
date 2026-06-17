@@ -28,11 +28,7 @@ class GedController extends Controller
         }
         $page = (int) request('page', 1);
 
-        $caminho = $ged->fullPath($tipo, $path);
-
-        if (!$caminho) {
-            abort(404);
-        }
+        $caminho = $ged->assertSafePath($tipo, $path);
 
         if (!is_dir($caminho)) {
             abort(404);
@@ -165,7 +161,7 @@ class GedController extends Controller
     // ARQUIVO
     public function arquivo(GedService $ged, $tipo, $path)
     {
-        $arquivo = $ged->fullPath($tipo, urldecode($path));
+        $arquivo = $ged->assertSafePath($tipo, $path);
 
         if (!$arquivo || !file_exists($arquivo)) {
             abort(404);
@@ -210,8 +206,30 @@ class GedController extends Controller
             }
 
             foreach ($request->file('arquivos') as $arquivo) {
+                $extensoesBloqueadas = [
+                    'exe',
+                    'bat',
+                    'cmd',
+                    'com',
+                    'scr',
+                    'msi',
+                    'ps1',
+                    'vbs',
+                    'js',
+                    'jar',
+                    'reg',
+                ];
 
                 $nome = $arquivo->getClientOriginalName();
+
+                $extensao = strtolower($arquivo->getClientOriginalExtension());
+
+                if (in_array($extensao, $extensoesBloqueadas)) {
+                    return back()->with(
+                        'error',
+                        "Arquivos .{$extensao} não são permitidos."
+                    );
+                }
 
                 if (preg_match('/[\\\\\/:*?"<>|]/', $nome)) {
                     return back()->with(
@@ -246,7 +264,7 @@ class GedController extends Controller
     //DOWNLOAD
     public function download(GedService $ged, $tipo, $path)
     {
-        $arquivo = $ged->fullPath($tipo, urldecode($path));
+        $arquivo = $ged->assertSafePath($tipo, $path);
 
         if (!$arquivo || !file_exists($arquivo)) {
             abort(404);
@@ -259,6 +277,10 @@ class GedController extends Controller
     public function delete(Request $request, GedService $ged, $tipo)
     {
         $path = $request->input('path');
+
+        if (!$path || str_contains($path, '..')) {
+            abort(404);
+        }
 
         $full = $ged->fullPath($tipo, $path);
 
@@ -317,6 +339,10 @@ class GedController extends Controller
     {
         $paths = $request->input('paths', []);
 
+        $paths = array_filter($paths, function ($path) {
+            return !str_contains($path, '..');
+        });
+
         if (empty($paths)) {
             return back()->with('error', 'Nenhum item selecionado.');
         }
@@ -329,6 +355,10 @@ class GedController extends Controller
 
                 $full = $ged->fullPath($tipo, $path);
 
+                if (!$ged->assertInsideRoot($tipo, $path)) {
+                    continue;
+                }
+
                 if (!$full || !file_exists($full)) {
                     continue;
                 }
@@ -339,7 +369,7 @@ class GedController extends Controller
                     unlink($full);
                 }
 
-                cache()->forget("ged_{$tipo}_" . md5($full));
+                $this->limparCachePasta($tipo, dirname($path), $ged);
 
                 $pasta = dirname($path);
 
