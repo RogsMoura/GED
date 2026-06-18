@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GedController;
+use App\Http\Controllers\DocumentoController;
 
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('layouts.portal');
 });
 
 Route::get('/dashboard', function () {
@@ -38,6 +39,13 @@ Route::middleware('auth')->group(function () {
         ->whereIn('tipo', ['pf', 'pj', 'setores']);
     Route::delete('/ged/{tipo}/delete-multiple', [GedController::class, 'deleteMultiple'])
         ->whereIn('tipo', ['pf', 'pj', 'setores']);
+    Route::get('/portal/home', function () {return view('portal.home');});
+
+    //PARCIAL
+    Route::get('/portal/ged/setores', [DocumentoController::class, 'setoresPartial']);
+    Route::get('/portal/ged/setores/{path?}', [DocumentoController::class, 'setoresPartial'])
+        ->where('path', '.*');
+    Route::get('/portal/pesquisa', [DocumentoController::class, 'pesquisa']);
 });
 
 require __DIR__.'/auth.php';
