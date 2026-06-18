@@ -82,10 +82,57 @@ class DocumentoController extends Controller
 
     public function pesquisa(Request $request)
     {
-        $termo = $request->get('q');
+        $termo = trim($request->get('q', ''));
+
+        $resultados = [];
+
+        if ($termo !== '') {
+
+            $resultados = array_merge(
+                $this->buscarArquivos(config('ged.roots.setores'), $termo, 'Setores'),
+                $this->buscarArquivos(config('ged.roots.pf'), $termo, 'PF'),
+                $this->buscarArquivos(config('ged.roots.pj'), $termo, 'PJ')
+            );
+        }
 
         return view('ged.partials.pesquisa', [
             'termo' => $termo,
+            'resultados' => collect($resultados),
         ]);
+    }
+
+    private function buscarArquivos(string $raiz, string $termo, string $origem): array
+    {
+        $resultados = [];
+
+        if (!is_dir($raiz)) {
+            return $resultados;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(
+                $raiz,
+                \FilesystemIterator::SKIP_DOTS
+            ),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+
+            $nome = $item->getFilename();
+
+            if (stripos($nome, $termo) === false) {
+                continue;
+            }
+
+            $resultados[] = [
+                'nome' => $nome,
+                'caminho' => $item->getPathname(),
+                'origem' => $origem,
+                'tipo' => $item->isDir() ? 'pasta' : 'arquivo',
+            ];
+        }
+
+        return $resultados;
     }
 }

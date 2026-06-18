@@ -14,18 +14,20 @@ return new class extends Migration
         Schema::create('ged_index', function (Blueprint $table) {
             $table->id();
 
-            $table->string('tipo'); // pf, pj, setores
+            $table->string('tipo', 20);
 
-            $table->text('path');   // caminho completo relativo
+            $table->text('path');
+
             $table->string('nome');
 
             $table->boolean('is_file')->default(false);
 
-            $table->text('parent_path')->nullable();
+            $table->string('parent_path', 500)->nullable();
 
             $table->timestamps();
 
             $table->index(['tipo', 'parent_path']);
+            $table->index('nome');
         });
     }
 

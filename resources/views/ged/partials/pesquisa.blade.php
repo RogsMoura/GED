@@ -4,17 +4,43 @@
         🔍 Pesquisa Global
     </h2>
 
-    <p class="text-gray-600">
-        Pesquisando por:
-        <strong>{{ $termo }}</strong>
+    <p class="text-gray-600 mb-6">
+        Resultado para: <strong>{{ $termo }}</strong>
     </p>
 
-    <div class="mt-6 p-4 bg-white rounded shadow">
+    @if($resultados->isEmpty())
 
-        <p class="text-gray-500">
-            A pesquisa real será implementada no próximo passo.
-        </p>
+        <div class="p-4 bg-white rounded shadow">
+            Nenhum arquivo encontrado.
+        </div>
 
-    </div>
+    @else
+
+        <div class="space-y-3">
+
+            @foreach($resultados as $arquivo)
+
+                <div class="p-4 bg-white rounded shadow">
+
+                    <div class="font-semibold">
+                        {{ $arquivo['tipo'] === 'pasta' ? '📂' : '📄' }}
+                        {{ $arquivo['nome'] }}
+                    </div>
+
+                    <div class="text-sm text-gray-500">
+                        {{ $arquivo['origem'] }}
+                    </div>
+
+                    <div class="text-xs text-gray-400 mt-1">
+                        {{ $arquivo['caminho'] }}
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
+    @endif
 
 </div>
